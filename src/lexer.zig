@@ -22,7 +22,9 @@ pub fn init(buffer: []u8, tokens: []token_types.Token) Scanner {
     };
 }
 
-pub fn scan(self: *Scanner) void {
+pub fn scan(self: *Scanner) !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const keywords = try token_types.Keywords.init(gpa.allocator());
     while(!self.at_eof()) {
         self.pos = self.read_pos;
         const char = self.read_char();
@@ -73,11 +75,11 @@ pub fn scan(self: *Scanner) void {
 
             },
             '"' => self.string(),
-            ' ' => continue,
+            ' ', '\r', '\t' => continue,
             '\n' => self.curr_line += 1,
             else => {
                 if(self.is_alpha(char)) {
-                    self.identifier();
+                    self.identifier(keywords);
                     continue;
                 } else if(self.is_number(char)) {
                     self.number();
@@ -118,7 +120,7 @@ fn is_whitespace(self: Scanner) bool {
     return self.buffer[self.read_pos] == ' ' or self.buffer[self.read_pos] == '\n';
 }
 
-fn identifier(self: *Scanner) void {
+fn identifier(self: *Scanner, keywords: token_types.Keywords) void {
     while(!self.at_eof()) {
         const next_char = self.peek(0);
         if(!(self.is_alpha(next_char) or self.is_number(next_char))) {
@@ -126,7 +128,9 @@ fn identifier(self: *Scanner) void {
         }
         _ = self.read_char();
     }
-    self.add_token(token_types.TokenType.IDENTIFIER);
+
+    const token_type = keywords.get_keyword_map().get(self.buffer[self.pos..self.read_pos]) orelse token_types.TokenType.IDENTIFIER;
+    self.add_token(token_type);
 }
 
 fn string(self: *Scanner) void {
@@ -189,10 +193,10 @@ test "parse tokens" {
     const tokens = try allocator.alloc(token_types.Token, 64);
     defer allocator.free(tokens);
 
-    const buffer = try allocator.alloc(u8, 47);
+    const buffer = try allocator.alloc(u8, 49);
     defer allocator.free(buffer);
 
-    @memcpy(buffer[0..], "\"hello world\" variation \n1.23 1 3212123.121.123"[0..]);
+    @memcpy(buffer[0..], "\"hello world\" var iati or \n1.23 1 3212123.121.123"[0..]);
     var scanner = Scanner.init(buffer, tokens);
-    scanner.scan();
+    try scanner.scan();
 }
