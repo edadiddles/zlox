@@ -37,6 +37,18 @@ pub fn scan(self: *Scanner) !void {
             '.' => self.add_token(token_types.TokenType.DOT),
             '+' => self.add_token(token_types.TokenType.PLUS),
             '-' => self.add_token(token_types.TokenType.MINUS),
+            '*' => self.add_token(token_types.TokenType.STAR),
+            ';' => self.add_token(token_types.TokenType.SEMICOLON),
+            '/' => {
+                if (self.peek(0) != '/') {
+                    self.add_token(token_types.TokenType.SLASH);
+                    continue;
+                }
+
+                while(self.peek(0) != '\n' and !self.at_eof()) {
+                    _ = self.read_char();
+                }
+            },
             '!' => {
                 if(self.peek(0) == '=') {
                     _ = self.read_char();
@@ -193,10 +205,10 @@ test "parse tokens" {
     const tokens = try allocator.alloc(token_types.Token, 64);
     defer allocator.free(tokens);
 
-    const buffer = try allocator.alloc(u8, 49);
+    const buffer = try allocator.alloc(u8, 51);
     defer allocator.free(buffer);
 
-    @memcpy(buffer[0..], "\"hello world\" var iati or \n1.23 1 3212123.121.123"[0..]);
+    @memcpy(buffer[0..], "\"hello world\" var/iati// or \n1.23 1 3212123.121.123"[0..]);
     var scanner = Scanner.init(buffer, tokens);
     try scanner.scan();
 }
