@@ -211,4 +211,8 @@ test "parse tokens" {
     @memcpy(buffer[0..], "\"hello world\" var/iati// or \n1.23 1 3212123.121.123"[0..]);
     var scanner = Scanner.init(buffer, tokens);
     try scanner.scan();
+    for(tokens) |token| {
+        std.debug.print("{}\n", .{token});
+        if(token.type == token_types.TokenType.EOF) break;
+    }
 }
